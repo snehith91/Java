@@ -1,0 +1,155 @@
+/**
+ *
+ */
+/**
+ *
+ *
+ */
+package org.myorg;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.StringTokenizer;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Reducer.Context;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+
+public class WordCount{
+    public static class Mymap
+     extends Mapper<LongWritable, Text, Text, Text>{
+     
+     private Text one = new Text();
+     private Text word = new Text();
+     
+     public void map(LongWritable key, Text value, Context context
+     ) throws IOException, InterruptedException {
+     int count1=0,count2=0,count3=0;int i=0;
+     Text keyValue = new Text();
+     Text keyType = new Text();
+     //String art_name = null,art_location = null;
+     StringTokenizer itr = new StringTokenizer(value.toString(),"<SEP>");
+     
+      while (itr.hasMoreTokens()) {
+        String str=itr.nextToken();
+        FileSplit fileSplit=((FileSplit)context.getInputSplit());
+         String filename=fileSplit.getPath().getName().toString();
+         //System.out.println(//filename);
+       
+        if(count3==3 && filename.equals("table-3")){
+            keyType = new Text(str+"<SEP>");
+            System.out.println(keyType);
+        }
+        
+        if(count3==4 && filename.equals("table-3")){ 
+            keyValue = new Text(str);
+            System.out.println(keyValue);
+        }  
+        count3++;
+        if(count3==5 && filename.equals("table-3")){
+            context.write(keyType  , keyValue);
+            count3=0;
+        }
+        
+        if(count2==3 && filename.equals("table-2")){
+            keyType = new Text(str+"<SEP>");
+            System.out.println(keyType);
+        }
+        
+        if(count2==0 && filename.equals("table-2")){
+            keyValue = new Text(str);
+            System.out.println(keyValue);
+        }
+        count2++;
+        
+        if(count2==4 && filename.equals("table-2")){
+            context.write(keyType  , keyValue);
+            count2=0;
+        }
+        
+        if(count1==2 && filename.equals("table-1")){
+            keyType = new Text(str+"<SEP>");
+            System.out.println(keyType);
+        }
+        
+        if(count1==3 && filename.equals("table-1")){
+            keyValue = new Text(str);
+            System.out.println(keyValue);
+        }
+        count1++;
+        
+        if(count1==4 && filename.equals("table-1")){
+            context.write(keyType  , keyValue);
+            count1=0;
+            System.out.println(keyType);
+            System.out.println(keyValue);
+        } 
+     
+     }
+     }
+    }
+     
+     public static class IntSumReducer
+     extends Reducer<Text,Text,Text,Text> {
+   
+     public void reduce(Text key, Iterable<Text> Values,
+     Context context
+    ) throws IOException, InterruptedException {
+         Text result= new Text();
+       
+         String x = null;
+       
+          for(Text val : Values){
+             
+             String tmp = val.toString();
+             if(x!=null){
+                 x=x.concat("<SEP>".concat(tmp));
+             }
+             if(x==null){
+                 x=tmp;
+             }
+                      
+         }
+         
+          result.set(x);
+          context.write(key,new Text(result));         
+   
+     }
+     }
+     public static void main(String[] args) throws Exception {
+     Configuration conf = new Configuration();
+     String[] otherArgs = new GenericOptionsParser(conf,
+    args).getRemainingArgs();
+     if (otherArgs.length != 2) {
+     System.err.println("Usage: wordcount <in> <out>");
+     System.exit(2);
+     }
+     
+     Job job = new Job(conf, "word count");
+     job.setJarByClass(WordCount.class);
+     job.setMapperClass(Mymap.class);
+     job.setCombinerClass(IntSumReducer.class);
+     job.setReducerClass(IntSumReducer.class);
+     job.setOutputKeyClass(Text.class);
+     job.setOutputValueClass(Text.class);
+     
+     
+     // conf.addResource(new Path("/opt/Hadoop/conf/core-site.xml"));
+     // conf.addResource(new Path("/opt/Hadoop/conf/mapred-site.xml"));
+
+    FileInputFormat.addInputPath(job, new Path("hdfs://snehith:9000/" +
+    otherArgs[0]));
+     FileOutputFormat.setOutputPath(job, new Path("hdfs://snehith:9000/" +
+    otherArgs[1]));
+     System.exit(job.waitForCompletion(true) ? 0 : 1);
+     }
+    }
